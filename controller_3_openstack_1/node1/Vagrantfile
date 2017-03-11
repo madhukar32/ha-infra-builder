@@ -1,0 +1,115 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+#ip route add 10.87.64.0/24 dev eth1
+$script = <<SCRIPT
+sudo route delete default gw 10.0.2.2
+sudo ip addr flush dev eth1
+sudo ifdown eth1
+sudo ifup eth1
+SCRIPT
+
+Vagrant.configure("2") do |config|
+
+  #Please update the IP's
+  controller_ip  = ["10.8.6.1"]
+  analytics_ip   = ["10.8.6.2"]
+  analyticsdb_ip = ["10.8.6.3"]
+  
+  (1..1).each do |id|
+
+    controller   = "controller-new"  + id.to_s
+    analytics    = "analytics-new"   + id.to_s
+    analyticsdb  = "analyticsdb-new" + id.to_s
+
+    config.vm.define controller do |contrail_controller|
+      contrail_controller.vm.box = "contrail/ubuntu-14.04.4"
+      contrail_controller.vm.hostname = controller
+
+      contrail_controller.vm.network "public_network", ip: "#{controller_ip[id-1]}", bridge: "em1"
+
+      contrail_controller.vm.provider "virtualbox" do |vb|
+        vb.memory = "16000"
+        vb.cpus = 4
+      end
+
+      #shell set default gateway
+      contrail_controller.vm.provision "shell", path: "scripts/enable_gw.sh"
+      contrail_controller.vm.provision "shell", path: "scripts/root_login.sh"
+      contrail_controller.vm.provision "shell", path: "scripts/ntp_config.sh"
+
+      contrail_controller.vm.provision "shell",
+        run: "always",
+        inline: $script
+
+    end
+
+    config.vm.define analytics do |contrail_analytics|
+      contrail_analytics.vm.box = "contrail/ubuntu-14.04.4"
+      contrail_analytics.vm.hostname = analytics
+
+      contrail_analytics.vm.network "public_network", ip: "#{analytics_ip[id-1]}", bridge: "em1"
+
+      contrail_analytics.vm.provider "virtualbox" do |vb|
+        vb.memory = "16000"
+        vb.cpus = 4
+      end
+
+      #shell set default gateway
+      contrail_analytics.vm.provision "shell", path: "scripts/root_login.sh"
+      contrail_analytics.vm.provision "shell", path: "scripts/enable_gw.sh"
+      contrail_analytics.vm.provision "shell", path: "scripts/ntp_config.sh"
+
+      contrail_analytics.vm.provision "shell",
+        run: "always",
+        inline: $script 
+
+    end
+
+    config.vm.define analyticsdb do |contrail_analyticsdb|
+      contrail_analyticsdb.vm.box = "contrail/ubuntu-14.04.4"
+      contrail_analyticsdb.vm.hostname = analyticsdb
+
+      contrail_analyticsdb.vm.network "public_network", ip: "#{analyticsdb_ip[id-1]}", bridge: "em1"
+
+      contrail_analyticsdb.vm.provider "virtualbox" do |vb|
+        vb.memory = "16000"
+        vb.cpus = 4
+      end
+
+      #shell set default gateway
+      contrail_analyticsdb.vm.provision "shell", path: "scripts/root_login.sh"
+      contrail_analyticsdb.vm.provision "shell", path: "scripts/enable_gw.sh"
+      contrail_analyticsdb.vm.provision "shell", path: "scripts/ntp_config.sh"
+
+      contrail_analyticsdb.vm.provision "shell",
+        run: "always",
+        inline: $script
+      
+    end
+  end
+  
+  #Please update the IP's
+  openstack_ip = "10.8.6.100"
+  config.vm.define openstack do |openstack1|
+    openstack1.vm.box = "contrail/ubuntu-14.04.4"
+    openstack1.vm.hostname = openstack
+      
+    openstack1.vm.network "public_network", ip: "#{openstack_ip}", bridge: "em1"
+
+    openstack1.vm.provider "virtualbox" do |vb|
+      vb.memory = "16000"
+      vb.cpus = 4
+    end
+
+    #shell set default gateway
+    openstack1.vm.provision "shell", path: "scripts/root_login.sh"
+    openstack1.vm.provision "shell", path: "scripts/enable_gw.sh"
+    openstack1.vm.provision "shell", path: "scripts/ntp_config.sh"
+
+    openstack1.vm.provision "shell",
+      run: "always",
+      inline: $script
+
+  end
+end
