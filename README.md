@@ -17,7 +17,7 @@ sudo apt-get install git
 
 * Clone the repository
 ```bash
-sudo git clone 
+sudo git clone https://github.com/madhukar32/ha-infra-builder.git
 cd ha-infra-builder
 ```
 
